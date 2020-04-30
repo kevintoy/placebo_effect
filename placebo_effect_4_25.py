@@ -8,20 +8,29 @@ Created on Sat Apr 25 21:15:38 2020
 import matplotlib.pyplot as plt
 import random
 import numpy as np
-N=100
-sample_size=50
-generation=500
-repeat=10
+N=50
+sample_size=5
+generation=200
+repeat=500
 
 
 percent_T1=0.9 #starting percentage of individual with technology T1
+belief_formation="mean" #individuals can either "sample" from a beta distribution or 
+                          #just use the mean of the beta distribution. Possible arguments: "mean", "sample"
+prior_a1=1
+prior_b1=1
+prior_a2=1
+prior_b2=1
+
 Eb1=0.3
-Eb2=0.4
-beta=0.0
+Eb2=0.95
+beta=0.3
 beta1=0.0
 
 w_o=1
 w_a=1
+
+
 
 def equi_effi(Eb,beta,beta1):
     return Eb/(1-Eb*beta1-beta)
@@ -45,6 +54,9 @@ def T_freq(T,pop):
 T1_fix_num=0
 T2_fix_num=0
 no_fix_num=0
+
+T1_end_freq_list=[]
+
 for re in range(repeat):
     pop=[]
     #construct population
@@ -100,18 +112,34 @@ for re in range(repeat):
                         T2_neg_count=T2_neg_count+1
                     
             if T1_count==0: #if there's no T1 in model_list
-                belief_T2=(w_o*T2_count+w_a*T2_pos_count)/(w_o*T2_count+w_a*T2_pos_count+w_a*T2_neg_count)
+                if belief_formation=="mean":
+                    belief_T2=(w_o*T2_count+w_a*T2_pos_count)/(w_o*T2_count+w_a*T2_pos_count+w_a*T2_neg_count)
+                if belief_formation=="sample":
+                    belief_T2=np.random.beta(prior_a2+w_o*T2_count+w_a*T2_pos_count,prior_b2+w_a*T2_neg_count)
                 pop_f1.append(["T2",belief_T2])
             elif T2_count==0:
-                belief_T1=(w_o*T1_count+w_a*T1_pos_count)/(w_o*T1_count+w_a*T1_pos_count+w_a*T1_neg_count)
+                if belief_formation=="mean":    
+                    belief_T1=(w_o*T1_count+w_a*T1_pos_count)/(w_o*T1_count+w_a*T1_pos_count+w_a*T1_neg_count)
+                if belief_formation=="sample":
+                    belief_T1=np.random.beta(prior_a1+w_o*T1_count+w_a*T1_pos_count,prior_b1+w_a*T1_neg_count)
                 pop_f1.append(["T1",belief_T1])
             else: #when there's both T1 and T2 in the model sample
-                belief_T1=(w_o*T1_count+w_a*T1_pos_count)/(w_o*T1_count+w_o*T2_count+w_a*T1_pos_count+w_a*T1_neg_count)
-                belief_T2=(w_o*T2_count+w_a*T2_pos_count)/(w_o*T1_count+w_o*T2_count+w_a*T2_pos_count+w_a*T2_neg_count)
-                if belief_T1/(belief_T1+belief_T2)>random.random():
-                    pop_f1.append(["T1",belief_T1])
-                else:
-                    pop_f1.append(["T2",belief_T2])
+                if belief_formation=="mean":    
+                
+                    belief_T1=(w_o*T1_count+w_a*T1_pos_count)/(w_o*T1_count+w_o*T2_count+w_a*T1_pos_count+w_a*T1_neg_count)
+                    belief_T2=(w_o*T2_count+w_a*T2_pos_count)/(w_o*T1_count+w_o*T2_count+w_a*T2_pos_count+w_a*T2_neg_count)
+                    if belief_T1/(belief_T1+belief_T2)>random.random():
+                        pop_f1.append(["T1",belief_T1])
+                    else:
+                        pop_f1.append(["T2",belief_T2])
+                if belief_formation=="sample":
+                    belief_T1=np.random.beta(prior_a1+w_o*T1_count+w_a*T1_pos_count,prior_b1+w_o*T2_count+w_a*T1_neg_count)
+                    belief_T2=np.random.beta(prior_a2+w_o*T2_count+w_a*T2_pos_count,prior_b2+w_o*T1_count+w_a*T2_neg_count)
+                    if belief_T1/(belief_T1+belief_T2)>random.random():
+                        pop_f1.append(["T1",belief_T1])
+                    else:
+                        pop_f1.append(["T2",belief_T2])        
+                        
         pop=pop_f1
         T1_freq_time_series.append(T_freq("T1",pop))
     print ("T1_freq=",T_freq("T1",pop), "T2_freq=",T_freq("T2",pop))
@@ -121,7 +149,7 @@ for re in range(repeat):
         T2_fix_num=T2_fix_num+1
     else:
         no_fix_num=no_fix_num+1
-        
+    T1_end_freq_list.append(T_freq("T1", pop))
     
     gen_list=[i for i in range(generation)]
     plt.plot (gen_list,T1_freq_time_series,color="k")
@@ -130,8 +158,8 @@ for re in range(repeat):
 
         
 print ("T1_fix_rate=",T1_fix_num/repeat,"T2_fix_rate=",T2_fix_num/repeat,"no_fix_rate=",no_fix_num/repeat)
-        
-        
+print ("T1_ave_freq=",sum(T1_end_freq_list)/repeat)
+print ("beta=",beta, "beta1=",beta1, "Eb2=",Eb2)
         
         
         
